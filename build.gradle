@@ -1,0 +1,18 @@
+group 'org.usfirst.frc.team2713'
+version '0.0.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'application'
+
+mainClassName = "org.usfirst.frc.team2713.wesee.WeSee"
+
+repositories {
+    maven {
+        url 'http://first.wpi.edu/FRC/roborio/maven/release'
+    }
+}
+
+dependencies {
+    compile 'edu.wpi.first.wpilib.networktables.java:NetworkTables:+:armhf'
+    compile files('/usr/local/share/OpenCV/java/opencv-320.jar')
+}
