@@ -1,10 +1,10 @@
-group 'org.usfirst.frc.team2713'
+group 'org.iraiders.wesee'
 version '0.0.0-SNAPSHOT'
 
 apply plugin: 'java'
 apply plugin: 'application'
 
-mainClassName = "org.usfirst.frc.team2713.wesee.WeSee"
+mainClassName = "org.iraiders.wesee.WeSee"
 
 repositories {
     maven {
