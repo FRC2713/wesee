@@ -7,12 +7,11 @@ apply plugin: 'application'
 mainClassName = "org.iraiders.wesee.WeSee"
 
 repositories {
-    maven {
-        url 'http://first.wpi.edu/FRC/roborio/maven/release'
-    }
+    maven { url 'http://first.wpi.edu/FRC/roborio/maven/release' }
+    maven { url 'http://thaumavor.io/maven' }
 }
 
 dependencies {
     compile 'edu.wpi.first.wpilib.networktables.java:NetworkTables:+:armhf'
-    compile files('/usr/local/share/OpenCV/java/opencv-320.jar')
+    compile 'org.opencv:opencv:3.2.0'
 }
