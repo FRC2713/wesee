@@ -38,8 +38,6 @@ public class WeSee {
         capture.set(Videoio.CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
         capture.set(Videoio.CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
         capture.set(Videoio.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE);
-        capture.set(Videoio.CAP_PROP_XI_AUTO_WB, 0);
-        capture.set(Videoio.CAP_PROP_XI_MANUAL_WB, 0);
         capture.set(Videoio.CAP_PROP_EXPOSURE, 0);
         capture.set(Videoio.CAP_PROP_AUTOFOCUS, 0);
         capture.set(Videoio.CAP_PROP_FOCUS, 0);
