@@ -2,9 +2,12 @@ group 'org.iraiders.wesee'
 version '0.0.0-SNAPSHOT'
 
 apply plugin: 'java'
+apply plugin: 'c'
 apply plugin: 'application'
 
-mainClassName = "org.iraiders.wesee.WeSee"
+mainClassName = 'org.iraiders.wesee.WeSee'
+
+applicationDefaultJvmArgs = ['-Djava.library.path=LIB_FOLDER']
 
 repositories {
     maven { url 'http://first.wpi.edu/FRC/roborio/maven/release' }
@@ -14,4 +17,80 @@ repositories {
 dependencies {
     compile 'edu.wpi.first.wpilib.networktables.java:NetworkTables:+:armhf'
     compile 'org.opencv:opencv:3.2.0'
+}
+
+run {
+    dependsOn ':v4l2jniSharedLibrary'
+    jvmArgs = ['-Djava.library.path=build/libs/v4l2jni/shared']
+}
+
+distZip {
+    into(project.name + '-' + project.version + '/lib') {
+        from 'build/libs/v4l2jni/shared'
+        include '*.so'
+    }
+    dependsOn ':v4l2jniSharedLibrary'
+}
+
+distTar {
+    into(project.name + '-' + project.version + '/lib') {
+        from 'build/libs/v4l2jni/shared'
+        include '*.so'
+    }
+    dependsOn ':v4l2jniSharedLibrary'
+}
+
+startScripts {
+    doLast {
+        def windowsScriptFile = file getWindowsScript()
+        def unixScriptFile    = file getUnixScript()
+        windowsScriptFile.text = windowsScriptFile.text.replace('LIB_FOLDER', '%APP_HOME%\\lib')
+        unixScriptFile.text  = unixScriptFile.text.replace('LIB_FOLDER', '$APP_HOME/lib')
+    }
+}
+
+model {
+    components {
+        v4l2jni(NativeLibrarySpec) {
+            if (project.hasProperty('target.platform')) {
+                targetPlatform this.properties['target.platform']
+            } else {
+                targetPlatform 'pi'
+            }
+
+            sources {
+                c {
+                    source {
+                        srcDir 'src/main/jni'
+                        include '**/*.c'
+                    }
+                }
+            }
+        }
+    }
+    toolChains {
+        gcc(Gcc) {
+            target("pi") {
+                cCompiler.executable = 'arm-linux-gnueabihf-gcc'
+                linker.executable = 'arm-linux-gnueabihf-gcc'
+                assembler.executable = 'arm-linux-gnueabihf-as'
+                staticLibArchiver.executable = 'arm-linux-gnueabihf-ar'
+            }
+            eachPlatform {
+                cCompiler.withArguments { args ->
+                    args << '-I' + this.properties['jni.include.dir']
+                    args << '-I' + this.properties['jni.include.dir'] + '/linux'
+                }
+            }
+        }
+    }
+    platforms {
+        pi {
+            architecture "arm"
+            operatingSystem "linux"
+        }
+        host {
+            operatingSystem 'linux'
+        }
+    }
 }

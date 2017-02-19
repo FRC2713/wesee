@@ -28,6 +28,7 @@ public class WeSee {
 
     static {
         System.load("/usr/local/share/OpenCV/java/libopencv_java320.so");
+        System.loadLibrary("v4l2jni");
     }
 
     private VideoCapture capture;
@@ -35,6 +36,7 @@ public class WeSee {
     public WeSee(int camId) {
         capture = new VideoCapture(camId);
 
+        setWhitebalance(camId);
         capture.set(Videoio.CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
         capture.set(Videoio.CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
         capture.set(Videoio.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE);
@@ -53,6 +55,8 @@ public class WeSee {
     public static void main(String[] args) {
         new WeSee(0).loop();
     }
+
+    private native void setWhitebalance(int camId);
 
     public void loop() {
         while (true) {

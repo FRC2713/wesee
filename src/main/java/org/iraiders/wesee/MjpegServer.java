@@ -4,10 +4,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /*
  * I don't actually know how this should work.
@@ -15,8 +13,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class MjpegServer implements Runnable {
     private ServerSocket server;
-    private List<Connection> connections = new ArrayList<>();
-    private BlockingQueue<Connection> toClose = new LinkedBlockingQueue<>();
+    private List<Connection> connections = new CopyOnWriteArrayList<>();
 
     public MjpegServer(int port) {
         try {
@@ -31,15 +28,9 @@ public class MjpegServer implements Runnable {
         while (true) {
             try {
                 Connection connection = new Connection(server.accept());
-                System.out.println("Accepting new connection...");
                 connections.add(connection);
-
-                if (!toClose.isEmpty()) {
-                    connections.remove(toClose.take());
-                }
-
                 new Thread(connection).start();
-            } catch (IOException | InterruptedException e) {
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
@@ -53,21 +44,21 @@ public class MjpegServer implements Runnable {
 
     private class Connection implements Runnable {
         private Socket socket;
-        private BlockingQueue<byte[]> frameQueue;
+        private byte[] frame;
+        private boolean pushed = true;
 
         public Connection(Socket socket) {
             this.socket = socket;
-            frameQueue = new LinkedBlockingQueue<>();
         }
 
         private void pushFrame(byte[] frame) {
-            frameQueue.offer(frame);
+            this.frame = frame;
+            pushed = false;
         }
 
         @Override
         public void run() {
             try {
-                System.out.println("Accepted new connection.");
                 OutputStream out = socket.getOutputStream();
                 out.write("HTTP/1.1 200 Success\r\n".getBytes());
                 out.write("Cache-Control: no-store, no-cache\r\n".getBytes());
@@ -75,14 +66,15 @@ public class MjpegServer implements Runnable {
                 out.flush();
 
                 while (true) {
-                    byte[] frame = frameQueue.take();
-
-                    out.write("--frameboundary\r\n".getBytes());
-                    out.write("Content-Type: image/jpeg\r\n".getBytes());
-                    out.write(("Content-Length: " + frame.length + "\r\n\r\n").getBytes());
-                    out.write(frame);
-                    out.write("\r\n\r\n".getBytes());
-                    out.flush();
+                    if (!pushed) {
+                        out.write("--frameboundary\r\n".getBytes());
+                        out.write("Content-Type: image/jpeg\r\n".getBytes());
+                        out.write(("Content-Length: " + frame.length + "\r\n\r\n").getBytes());
+                        out.write(frame);
+                        out.write("\r\n\r\n".getBytes());
+                        out.flush();
+                    }
+                    Thread.sleep(20);
                 }
             } catch (IOException e) {
                 closeConnection();
@@ -93,8 +85,7 @@ public class MjpegServer implements Runnable {
 
         private void closeConnection() {
             try {
-                System.out.println("Closing connection...");
-                toClose.offer(this);
+                connections.remove(this);
                 socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
