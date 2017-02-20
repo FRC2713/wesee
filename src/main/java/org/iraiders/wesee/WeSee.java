@@ -1,5 +1,6 @@
 package org.iraiders.wesee;
 
+import edu.wpi.first.wpilibj.networktables.NetworkTable;
 import org.opencv.core.*;
 import org.opencv.core.Point;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -16,6 +17,9 @@ public class WeSee {
 
     private static final int MINIMUM_CONTOUR_AREA = 500;
     private static final int MINIMUM_CONTOUR_BB_WIDTH = 15;
+
+    private static final double TARGET_WIDTH_INCHES = 10.25D;
+    private static final double CAMERA_HORIZ_VIEW_ANGLE = 55.1D;
 
     private static final double MANUAL_EXPOSURE = 0.25D;
 
@@ -44,12 +48,13 @@ public class WeSee {
         capture.set(Videoio.CAP_PROP_AUTOFOCUS, 0);
         capture.set(Videoio.CAP_PROP_FOCUS, 0);
 
-        server = new MjpegServer(2556);
+        server = new MjpegServer(1189);
         new Thread(server).start();
 
-        /*NetworkTable.setClientMode();
+        NetworkTable.setClientMode();
         NetworkTable.setTeam(2713);
-        NetworkTable.initialize();*/
+        NetworkTable.setIPAddress(new String[] {"roborio-2713-frc.local", "10.27.13.103"});
+        NetworkTable.initialize();
     }
 
     public static void main(String[] args) {
@@ -59,9 +64,21 @@ public class WeSee {
     private native void setWhitebalance(int camId);
 
     public void loop() {
+        NetworkTable table = NetworkTable.getTable("VisionProcessing");
         while (true) {
+            Thread.yield();
+
             /* First, read from the camera into the matrix named frame. */
             Mat frame = new Mat();
+
+            boolean doProcess = false;
+            if (table.getNumber("status", 0) != 1) {
+                capture.set(Videoio.CAP_PROP_EXPOSURE, 0.072D);
+            } else {
+                capture.set(Videoio.CAP_PROP_EXPOSURE, 0D);
+                doProcess = true;
+            }
+
             if (!capture.read(frame)) { // If nothing is read,
                 frame.release(); // clear the memory...
                 continue; // and keep trying.
@@ -71,6 +88,12 @@ public class WeSee {
             Imgcodecs.imencode(".jpg", frame, jpgEncoded);
             server.pushFrame(jpgEncoded.toArray());
             jpgEncoded.release();
+
+            if (!doProcess) {
+                continue;
+            }
+
+            capture.set(Videoio.CAP_PROP_EXPOSURE, 0D);
 
             /* Next, convert the color space from BGR to HLS for thresholding. */
             Imgproc.cvtColor(frame, frame, Imgproc.COLOR_BGR2HLS);
@@ -120,6 +143,13 @@ public class WeSee {
 
             int center = boundingRect.x + boundingRect.width/2;
             int displacement = center - (FRAME_WIDTH/2 - 1);
+            double angle = CAMERA_HORIZ_VIEW_ANGLE * displacement/(double) FRAME_WIDTH;
+            double distance =
+                    (TARGET_WIDTH_INCHES * FRAME_WIDTH)/(2 * boundingRect.width * Math.tan(CAMERA_HORIZ_VIEW_ANGLE/2));
+
+            table.putNumber("correctionAngle", angle);
+            table.putNumber("approxDistance", distance);
+            table.putNumber("status", 2);
 
             frame.release();
         }
