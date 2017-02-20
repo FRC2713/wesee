@@ -41,7 +41,7 @@ JNIEXPORT void JNICALL Java_org_iraiders_wesee_WeSee_setWhitebalance
     perror("Could not disable auto white balance");
     return;
   }
-  if (!set_control(camfd, V4L2_CID_WHITE_BALANCE_TEMPERATURE, 4000))
+  if (!set_control(camfd, V4L2_CID_WHITE_BALANCE_TEMPERATURE, 2000))
   {
     perror("Could not set white balance");
     return;
