@@ -10,10 +10,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /*
  * I don't actually know how this should work.
  * This is a very rough implementation of an MJPEG-Over-HTTP server
+ *
+ * This thing lags a lot. Never use it.
  */
 public class MjpegServer implements Runnable {
     private ServerSocket server;
     private List<Connection> connections = new CopyOnWriteArrayList<>();
+    private final FrameLock frame = new FrameLock();
 
     public MjpegServer(int port) {
         try {
@@ -36,24 +39,18 @@ public class MjpegServer implements Runnable {
         }
     }
 
-    public void pushFrame(byte[] frame) {
-        for (Connection connection : connections) {
-            connection.pushFrame(frame);
+    public void pushFrame(byte[] data) {
+        synchronized (frame) {
+            frame.setData(data);
+            frame.notifyAll();
         }
     }
 
     private class Connection implements Runnable {
         private Socket socket;
-        private byte[] frame;
-        private boolean pushed = true;
 
         public Connection(Socket socket) {
             this.socket = socket;
-        }
-
-        private void pushFrame(byte[] frame) {
-            this.frame = frame;
-            pushed = false;
         }
 
         @Override
@@ -66,15 +63,16 @@ public class MjpegServer implements Runnable {
                 out.flush();
 
                 while (true) {
-                    if (!pushed) {
-                        out.write("--frameboundary\r\n".getBytes());
-                        out.write("Content-Type: image/jpeg\r\n".getBytes());
-                        out.write(("Content-Length: " + frame.length + "\r\n\r\n").getBytes());
-                        out.write(frame);
-                        out.write("\r\n\r\n".getBytes());
-                        out.flush();
+                    synchronized (frame) {
+                        frame.wait();
                     }
-                    Thread.sleep(20);
+
+                    out.write("--frameboundary\r\n".getBytes());
+                    out.write("Content-Type: image/jpeg\r\n".getBytes());
+                    out.write(("Content-Length: " + frame.getData().length + "\r\n\r\n").getBytes());
+                    out.write(frame.getData());
+                    out.write("\r\n\r\n".getBytes());
+                    out.flush();
                 }
             } catch (IOException e) {
                 closeConnection();
@@ -90,6 +88,18 @@ public class MjpegServer implements Runnable {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private class FrameLock {
+        private byte[] data;
+
+        public void setData(byte[] data) {
+            this.data = data;
+        }
+
+        public byte[] getData() {
+            return data;
         }
     }
 }
