@@ -32,7 +32,7 @@ JNIEXPORT void JNICALL Java_org_iraiders_wesee_WeSee_setWhitebalance
   int camfd = open(buf, O_RDWR | O_NONBLOCK, 0);
   if (camfd == -1)
   {
-    fprintf(stderr, "Cannot open %s: %s", buf, strerror(errno));
+    fprintf(stderr, "Cannot open %s: %s\n", buf, strerror(errno));
     return;
   }
 
