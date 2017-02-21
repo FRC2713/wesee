@@ -24,8 +24,8 @@ public class WeSee {
     private static final double MANUAL_EXPOSURE = 0.25D;
 
     private static final Scalar[] HLS_THRESHOLD = new Scalar[] {
-            new Scalar(69D, 23D, 128D),
-            new Scalar(85D, 60D, 255D)
+            new Scalar(71D, 56D, 151D),
+            new Scalar(90D, 103D, 214D)
     };
 
     private MjpegServer server;
@@ -47,6 +47,7 @@ public class WeSee {
         capture.set(Videoio.CAP_PROP_EXPOSURE, 0);
         capture.set(Videoio.CAP_PROP_AUTOFOCUS, 0);
         capture.set(Videoio.CAP_PROP_FOCUS, 0);
+        capture.set(Videoio.CAP_PROP_SATURATION, 1);
 
         server = new MjpegServer(1189);
         new Thread(server).start();
@@ -74,8 +75,10 @@ public class WeSee {
             boolean doProcess = false;
             if (table.getNumber("status", 0) != 1) {
                 capture.set(Videoio.CAP_PROP_EXPOSURE, 0.072D);
+                capture.set(Videoio.CAP_PROP_SATURATION, 0.5D);
             } else {
                 capture.set(Videoio.CAP_PROP_EXPOSURE, 0D);
+                capture.set(Videoio.CAP_PROP_SATURATION, 1);
                 doProcess = true;
             }
 
@@ -129,6 +132,7 @@ public class WeSee {
                         && Imgproc.contourArea(contour) >= MINIMUM_CONTOUR_AREA) {
                     points.addAll(contour.toList());
                 }
+                contour.release();
             }
 
             if (points.isEmpty()) { // Pointless to continue if we have no useful contours.
@@ -142,10 +146,10 @@ public class WeSee {
             mixedContours.release();
 
             int center = boundingRect.x + boundingRect.width/2;
-            int displacement = center - (FRAME_WIDTH/2 - 1);
+            int displacement = (FRAME_WIDTH/2 - 1) - center;
             double angle = CAMERA_HORIZ_VIEW_ANGLE * displacement/(double) FRAME_WIDTH;
             double distance =
-                    (TARGET_WIDTH_INCHES * FRAME_WIDTH)/(2 * boundingRect.width * Math.tan(CAMERA_HORIZ_VIEW_ANGLE/2));
+                    (TARGET_WIDTH_INCHES * FRAME_WIDTH)/(2 * boundingRect.width * Math.tan(CAMERA_HORIZ_VIEW_ANGLE/2 * Math.PI/180));
 
             table.putNumber("correctionAngle", angle);
             table.putNumber("approxDistance", distance);
