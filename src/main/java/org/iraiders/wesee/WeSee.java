@@ -146,7 +146,7 @@ public class WeSee {
             mixedContours.release();
 
             int center = boundingRect.x + boundingRect.width/2;
-            int displacement = (FRAME_WIDTH/2 - 1) - center;
+            int displacement = center - (FRAME_WIDTH/2 - 1);
             double angle = CAMERA_HORIZ_VIEW_ANGLE * displacement/(double) FRAME_WIDTH;
             double distance =
                     (TARGET_WIDTH_INCHES * FRAME_WIDTH)/(2 * boundingRect.width * Math.tan(CAMERA_HORIZ_VIEW_ANGLE/2 * Math.PI/180));
